@@ -15,11 +15,13 @@ import (
 func Signup(c *gin.Context) {
 	// Get email and password from request
 	var body struct {
-		Email    string
-		Password string
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		RoleID   uint   `json:"roleId"`
+		Name     string `json:"name"`
 	}
 
-	if c.Bind(&body) != nil {
+	if c.BindJSON(&body) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
@@ -33,7 +35,10 @@ func Signup(c *gin.Context) {
 	}
 
 	// Create a new user
-	user := models.User{Email: body.Email, Password: string(hash)}
+	user := models.User{Email: body.Email, Password: string(hash),
+		RoleID: body.RoleID,
+		Name:   body.Name,
+	}
 	result := initializers.DB.Create(&user)
 
 	if result.Error != nil {
@@ -58,9 +63,9 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Find the user
+	// Find the user and preload the role
 	var user models.User
-	result := initializers.DB.Where("email = ?", body.Email).First(&user)
+	result := initializers.DB.Where("email = ?", body.Email).Preload("Role").First(&user)
 
 	if result.Error != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
@@ -95,8 +100,11 @@ func Login(c *gin.Context) {
 	// Respond with the user
 	c.JSON(http.StatusOK, gin.H{
 		"user": models.UserWithoutPassword{
-			Email: user.Email,
-			Model: user.Model,
+			Email:     user.Email,
+			RoleID:    user.RoleID,
+			Role:      user.Role,
+			BaseModel: user.BaseModel,
+			Name:      user.Name,
 		},
 		"token": tokenString,
 	})
@@ -104,4 +112,27 @@ func Login(c *gin.Context) {
 
 func Validate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Valid token"})
+}
+
+func GetUsers(c *gin.Context) {
+	var users []models.User
+	result := initializers.DB.Preload("Role").Find(&users)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	var usersWithoutPassword []models.UserWithoutPassword
+	for _, user := range users {
+		usersWithoutPassword = append(usersWithoutPassword, models.UserWithoutPassword{
+			BaseModel: user.BaseModel,
+			Name:      user.Name,
+			Email:     user.Email,
+			RoleID:    user.RoleID,
+			Role:      user.Role,
+		})
+	}
+
+	c.JSON(http.StatusOK, usersWithoutPassword)
 }

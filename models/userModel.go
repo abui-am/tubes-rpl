@@ -1,21 +1,23 @@
 package models
 
-import "gorm.io/gorm"
-
 type User struct {
-	gorm.Model
-	Email    string `gorm:"unique;not null"`
-	Password string `gorm:"not null"`
-	RoleID   uint   `gorm:"not null"`
-	Role     Role   `gorm:"foreignKey:RoleID;onDelete:CASCADE"`
+	BaseModel `gorm:"embedded"`
+	Name      string `json:"name"`
+	Email     string `gorm:"unique;not null" json:"email"`
+	Password  string `gorm:"not null" json:"password"`
+	RoleID    uint   `json:"roleId"`
+	Role      *Role  `gorm:"foreignKey:RoleID;references:id" json:"role"`
 }
 
 type UserWithoutPassword struct {
-	gorm.Model
-	Email string `gorm:"unique;not null"`
+	BaseModel `gorm:"embedded"`
+	Name      string `json:"name"`
+	Email     string `gorm:"unique;not null" json:"email"`
+	RoleID    uint   `json:"roleId"`
+	Role      *Role  `gorm:"foreignKey:RoleID" json:"role"`
 }
 
 type Role struct {
-	gorm.Model
-	Name string `gorm:"not null"`
+	BaseModel `gorm:"embedded"`
+	Name      string `gorm:"not null" json:"name"`
 }
