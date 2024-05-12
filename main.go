@@ -27,6 +27,9 @@ func main() {
 
 	r.GET("/roles", controllers.GetRoles)
 	r.GET("/users", controllers.GetUsers)
+	r.GET("/users/:id", controllers.GetUser)
+	r.PUT("/users/:id", controllers.UpdateUser)
+	r.DELETE("/users/:id", controllers.DeleteUser)
 	r.POST("/signup", controllers.Signup)
 	r.POST("/login", controllers.Login)
 	r.GET("/validate", middleware.RequiredAuth, controllers.Validate)

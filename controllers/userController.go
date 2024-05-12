@@ -115,15 +115,26 @@ func Validate(c *gin.Context) {
 }
 
 func GetUsers(c *gin.Context) {
+
+	// Search for users
+	var searchQuery = c.Query("search")
+
 	var users []models.User
-	result := initializers.DB.Preload("Role").Find(&users)
+	var result = initializers.DB
+	if searchQuery != "" {
+		result = result.Where("name LIKE ?", "%"+searchQuery+"%").Preload("Role").Find(&users)
+	} else {
+		result = result.Preload("Role").Find(&users)
+	}
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
 
+	// Respond with the users
 	var usersWithoutPassword []models.UserWithoutPassword
+
 	for _, user := range users {
 		usersWithoutPassword = append(usersWithoutPassword, models.UserWithoutPassword{
 			BaseModel: user.BaseModel,
@@ -134,5 +145,78 @@ func GetUsers(c *gin.Context) {
 		})
 	}
 
+	// If no users are found, return an empty array
+	if len(usersWithoutPassword) == 0 {
+		usersWithoutPassword = []models.UserWithoutPassword{}
+	}
+
 	c.JSON(http.StatusOK, usersWithoutPassword)
+}
+
+func GetUser(c *gin.Context) {
+	var user models.User
+	result := initializers.DB.Preload("Role").First(&user, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.UserWithoutPassword{
+		BaseModel: user.BaseModel,
+		Name:      user.Name,
+		Email:     user.Email,
+		RoleID:    user.RoleID,
+		Role:      user.Role,
+	})
+}
+
+func UpdateUser(c *gin.Context) {
+	var body struct {
+		Email    string `json:"email"`
+		RoleID   uint   `json:"roleId"`
+		Name     string `json:"name"`
+		Password string `json:"password"`
+	}
+
+	if c.BindJSON(&body) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	var user models.User
+	result := initializers.DB.First(&user, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	user.Email = body.Email
+	user.RoleID = body.RoleID
+	user.Name = body.Name
+	user.Password = body.Password
+
+	result = initializers.DB.Save(&user)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func DeleteUser(c *gin.Context) {
+	var user models.User
+	result := initializers.DB.First(&user, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	initializers.DB.Delete(&user)
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
