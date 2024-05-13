@@ -79,3 +79,24 @@ func UpdateItem(c *gin.Context) {
 
 	c.JSON(http.StatusOK, item)
 }
+
+func DeleteItem(c *gin.Context) {
+	var item models.Item
+	result := initializers.DB.First(&item, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+		return
+	}
+
+	result = initializers.DB.Delete(&item)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete item"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Item deleted successfully",
+	})
+}
