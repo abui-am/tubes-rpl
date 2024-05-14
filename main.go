@@ -25,7 +25,10 @@ func main() {
 		})
 	})
 
+	r.POST("/roles", controllers.CreateRole)
 	r.GET("/roles", controllers.GetRoles)
+	r.PUT("/roles/:id", controllers.UpdateRole)
+	r.DELETE("/roles/:id", controllers.DeleteRoles)
 	r.GET("/users", controllers.GetUsers)
 	r.GET("/users/:id", controllers.GetUser)
 	r.PUT("/users/:id", controllers.UpdateUser)
@@ -37,6 +40,7 @@ func main() {
 	r.GET("/items/:id", middleware.RequiredAuth, controllers.GetItem) // GET: -> yang ngambil dari DB
 	r.POST("/items", middleware.RequiredAuth, controllers.CreateItem)
 	r.PUT("/items/:id", middleware.RequiredAuth, controllers.UpdateItem)      // PUT -> yang update ke DB
+	r.DELETE("/items/:id", middleware.RequiredAuth, controllers.DeleteItem)   // PUT -> yang update ke DB
 	r.POST("/borrowers", middleware.RequiredAuth, controllers.CreateBorrower) // POST -> yang masukin DB
 	r.GET("/borrowers", middleware.RequiredAuth, controllers.GetBorrowers)    // GET: -> yang ngambil dari DB
 	r.GET("/borrowers/:id", middleware.RequiredAuth, controllers.GetBorrower)
