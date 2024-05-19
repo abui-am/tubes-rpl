@@ -191,11 +191,16 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
 	user.Email = body.Email
 	user.RoleID = body.RoleID
 	user.Name = body.Name
-	user.Password = body.Password
+	user.Password = string(hash)
 
 	result = initializers.DB.Save(&user)
 
