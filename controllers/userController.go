@@ -122,7 +122,7 @@ func GetUsers(c *gin.Context) {
 	var users []models.User
 	var result = initializers.DB
 	if searchQuery != "" {
-		result = result.Where("name LIKE ?", "%"+searchQuery+"%").Preload("Role").Find(&users)
+		result = result.Debug().Where("name LIKE ?", "%"+searchQuery+"%").Preload("Role").Find(&users)
 	} else {
 		result = result.Preload("Role").Find(&users)
 	}

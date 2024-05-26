@@ -12,6 +12,9 @@ func GetItems(c *gin.Context) {
 	var items []models.Item
 	result := initializers.DB.Find(&items)
 
+	// TODO : Handle Search
+	// Mirip dengan controller user
+
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch items"})
 		return

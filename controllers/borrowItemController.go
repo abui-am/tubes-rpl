@@ -49,6 +49,9 @@ func CreateBorrowItem(c *gin.Context) {
 			Quantity:     item.Quantity,
 		}
 
+		// TODO: Handle the case when the item quantity is not enough
+		// Check if the item quantity is enough
+
 		result := initializers.DB.Debug().Create(&itemToBorrowItem)
 
 		if result.Error != nil {
@@ -87,6 +90,10 @@ func GetBorrowItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch borrowItems"})
 		return
 	}
+
+	// TODO : Implement search query
+	// Handle search query
+	// Filter the borrowItems based on the search query
 
 	c.JSON(http.StatusOK, borrowItems)
 }
