@@ -4,7 +4,7 @@ type User struct {
 	BaseModel `gorm:"embedded"`
 	Name      string `json:"name"`
 	Email     string `gorm:"unique;not null" json:"email"`
-	Password  string `gorm:"not null" json:"password"`
+	Password  string `gorm:"not null" json:"-"`
 	RoleID    uint   `json:"roleId"`
 	Role      *Role  `gorm:"foreignKey:RoleID;references:id" json:"role"`
 }
