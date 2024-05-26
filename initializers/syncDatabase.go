@@ -7,5 +7,6 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.User{})
 	DB.AutoMigrate(&models.Borrower{})
 	DB.AutoMigrate(&models.Item{})
+	DB.AutoMigrate(&models.ItemToBorrowItem{})
 	DB.AutoMigrate(&models.BorrowItem{})
 }

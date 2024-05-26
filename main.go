@@ -46,9 +46,9 @@ func main() {
 	r.GET("/borrowers/:id", middleware.RequiredAuth, controllers.GetBorrower)
 	r.PUT("/borrowers/:id", middleware.RequiredAuth, controllers.UpdateBorrower)
 	r.DELETE("/borrowers/:id", middleware.RequiredAuth, controllers.DeleteBorrower)
-	r.POST("/borrowItems", middleware.RequiredAuth, controllers.CreateBorrowItem)
-	r.GET("/borrowItems", middleware.RequiredAuth, controllers.GetBorrowItems)
-	r.GET("/borrowItems/:id", middleware.RequiredAuth, controllers.GetBorrowItem)
+	r.POST("/borrow-items", middleware.RequiredAuth, controllers.CreateBorrowItem)
+	r.GET("/borrow-items", middleware.RequiredAuth, controllers.GetBorrowItems)
+	r.GET("/borrow-items/:id", middleware.RequiredAuth, controllers.GetBorrowItem)
 	r.Run() // listen and serve on 0.0.0.0:8080
 }
 
