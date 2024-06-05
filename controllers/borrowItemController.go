@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"time"
 
 	"gihub.com/abui-am/tubes-rpl/initializers"
 	"gihub.com/abui-am/tubes-rpl/models"
@@ -18,10 +19,20 @@ func CreateBorrowItem(c *gin.Context) {
 			ItemID   uint `json:"itemId"`
 			Quantity int  `json:"quantity"`
 		} `json:"items"`
+		Description  string `json:"description"`
+		ReturnedDate string `json:"returnedDate"`
 	}
 
 	if c.Bind(&body) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	// Convert the returnedDate string to time.Time
+	time, err := time.Parse(time.RFC3339, body.ReturnedDate)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse returnedDate"})
 		return
 	}
 
@@ -32,6 +43,9 @@ func CreateBorrowItem(c *gin.Context) {
 		Status:            "borrowed",
 		ReturnedCondition: "",
 		IsReturnedLate:    false,
+		Description:       body.Description,
+		// body.returnedDate is a string, we need to convert it to time.Time
+		ReturnedDate: time,
 	}
 
 	result := initializers.DB.Create(&borrowItem)
