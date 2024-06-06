@@ -49,6 +49,7 @@ func main() {
 	r.POST("/borrow-items", middleware.RequiredAuth, controllers.CreateBorrowItem)
 	r.GET("/borrow-items", middleware.RequiredAuth, controllers.GetBorrowItems)
 	r.GET("/borrow-items/:id", middleware.RequiredAuth, controllers.GetBorrowItem)
+	r.PUT("/borrow-items/:id", middleware.RequiredAuth, controllers.UpdateBorrowItem)
 	r.Run() // listen and serve on 0.0.0.0:8080
 }
 

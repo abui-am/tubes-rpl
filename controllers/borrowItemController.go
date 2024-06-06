@@ -149,9 +149,54 @@ func GetBorrowItem(c *gin.Context) {
 	c.JSON(http.StatusOK, borrowItem)
 }
 
+// func UpdateBorrowItem(c *gin.Context) {
+// 	var body struct {
+// 		ReturnedDate      string `json:"returnedDate"`
+// 		ReturnedCondition string `json:"returnedCondition"`
+// 	}
+
+// 	if c.Bind(&body) != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+// 		return
+// 	}
+
+// 	var borrowItem models.BorrowItem
+// 	result := initializers.DB.First(&borrowItem, c.Param("id"))
+
+// 	if result.Error != nil {
+// 		c.JSON(http.StatusNotFound, gin.H{"error": "BorrowItem not found"})
+// 		return
+// 	}
+
+// 	// Convert the returnedDate string to time.Time
+// 	returnedDate, err := time.Parse(time.RFC3339, body.ReturnedDate)
+
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse returnedDate"})
+// 		return
+// 	}
+
+// 	var newBorrowItem = models.BorrowItem{
+// 		ReturnedDate:      &returnedDate,
+// 		ReturnedCondition: body.ReturnedCondition,
+// 		Status:            "returned",
+// 		IsReturnedLate:    returnedDate.After(*borrowItem.ReturnBefore),
+// 	}
+
+// 	result = initializers.DB.Model(&borrowItem).Updates(&newBorrowItem)
+
+// 	if result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update borrowItem"})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, borrowItem)
+// }
+
 func UpdateBorrowItem(c *gin.Context) {
+
 	var body struct {
-		Status            string `json:"status"`
+		ReturnedDate      string `json:"returnedDate"`
 		ReturnedCondition string `json:"returnedCondition"`
 	}
 
@@ -161,30 +206,61 @@ func UpdateBorrowItem(c *gin.Context) {
 	}
 
 	var borrowItem models.BorrowItem
-	result := initializers.DB.Find(&borrowItem, c.Param("id"))
+	result := initializers.DB.First(&borrowItem, c.Param("id"))
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "BorrowItem not found"})
 		return
 	}
 
-	// Update the borrowItem
-	borrowItem.Status = body.Status
-	borrowItem.ReturnedCondition = body.ReturnedCondition
+	// Convert the returnedDate string to time.Time
+	returnedDate, err := time.Parse(time.RFC3339, body.ReturnedDate)
 
-	// Update the returnedDate if the status is returned
-
-	time := time.Now()
-	if body.Status == "returned" {
-		borrowItem.ReturnedDate = &time
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse returnedDate"})
+		return
 	}
 
-	result = initializers.DB.Save(&borrowItem)
+	result = initializers.DB.Model(&borrowItem).Updates(models.BorrowItem{
+		ReturnedDate:      &returnedDate,
+		ReturnedCondition: body.ReturnedCondition,
+		Status:            "returned",
+		IsReturnedLate:    returnedDate.After(*borrowItem.ReturnBefore),
+	})
 
 	if result.Error != nil {
+		print(result.Error, "error")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update borrowItem"})
 		return
 	}
 
+	// Update the quantity of the item
+	var itemToBorrowItems []models.ItemToBorrowItem
+	result = initializers.DB.Debug().Where("borrow_item_id = ?", borrowItem.ID).Find(&itemToBorrowItems)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch itemToBorrowItems"})
+		return
+	}
+
+	for _, itemToBorrowItem := range itemToBorrowItems {
+
+		result = initializers.DB.Debug().Model(&models.Item{}).Where("id = ?", itemToBorrowItem.ItemID).Update("quantity", gorm.Expr("quantity + ?", itemToBorrowItem.Quantity))
+		if result.Error != nil {
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update item quantity"})
+
+			// Rollback the transaction
+			initializers.DB.Debug().Model(&borrowItem).Updates(models.BorrowItem{
+				ReturnedDate:      nil,
+				ReturnedCondition: "",
+				Status:            "borrowed",
+				IsReturnedLate:    false,
+			})
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, borrowItem)
+
 }
