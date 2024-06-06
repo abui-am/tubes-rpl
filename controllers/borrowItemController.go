@@ -34,7 +34,7 @@ func CreateBorrowItem(c *gin.Context) {
 		IsReturnedLate:    false,
 	}
 
-	result := initializers.DB.Create(&borrowItem)
+	result := initializers.DB.Debug().Create(&borrowItem)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create borrowItem"})
@@ -50,6 +50,21 @@ func CreateBorrowItem(c *gin.Context) {
 		}
 
 		// TODO: Handle the case when the item quantity is not enough
+		var dbItem models.Item
+		if err := initializers.DB.First(&dbItem, item.ItemID).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch item"})
+			// Rollback the transaction
+			initializers.DB.Debug().Delete(&borrowItem)
+			return
+		}
+
+		if dbItem.Quantity < item.Quantity {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Item quantity not sufficient"})
+			// Rollback the transaction
+			initializers.DB.Debug().Delete(&borrowItem)
+			return
+		}
+
 		// Check if the item quantity is enough
 
 		result := initializers.DB.Debug().Create(&itemToBorrowItem)
@@ -83,17 +98,43 @@ func CreateBorrowItem(c *gin.Context) {
 
 func GetBorrowItems(c *gin.Context) {
 	var borrowItems []models.BorrowItem
+
 	// Preload the items
-	result := initializers.DB.Debug().Preload(clause.Associations).Preload("User.Role").Preload("Items.Item").Find(&borrowItems)
+	result := initializers.DB.Debug().
+		Preload(clause.Associations).
+		Preload("User.Role").
+		Preload("Items.Item").
+		Find(&borrowItems)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch borrowItems"})
 		return
 	}
 
-	// TODO : Implement search query
 	// Handle search query
-	// Filter the borrowItems based on the search query
+	searchQuery := c.Query("search")
+	if searchQuery != "" {
+		var filteredBorrowItems []models.BorrowItem
+
+		for _, borrowItem := range borrowItems {
+			// Check if the User name or Borrower name matches the search query
+			if borrowItem.User.Name == searchQuery || borrowItem.Borrower.Name == searchQuery {
+				filteredBorrowItems = append(filteredBorrowItems, borrowItem)
+				continue
+			}
+
+			// Check if any item name matches the search query
+			for _, itemToBorrow := range borrowItem.Items {
+				if itemToBorrow.Item.Name == searchQuery {
+					filteredBorrowItems = append(filteredBorrowItems, borrowItem)
+					break
+				}
+			}
+		}
+
+		c.JSON(http.StatusOK, filteredBorrowItems)
+		return
+	}
 
 	c.JSON(http.StatusOK, borrowItems)
 }
