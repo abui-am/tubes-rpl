@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"regexp"
 	"time"
 
 	"gihub.com/abui-am/tubes-rpl/initializers"
@@ -97,18 +98,42 @@ func CreateBorrowItem(c *gin.Context) {
 }
 
 func GetBorrowItems(c *gin.Context) {
-	var borrowItems []models.BorrowItem
+	var borrowItems []models.BorrowItem = []models.BorrowItem{}
+	var searchQuery = c.Query("search")
 	// Preload the items
-	result := initializers.DB.Debug().Preload(clause.Associations).Preload("User.Role").Preload("Items.Item").Order("created_at desc").Find(&borrowItems)
+	result := initializers.DB.Debug().Preload("Items").Preload("User").Preload("Borrower").
+		Preload("User.Role").Preload("Items.Item").Order("created_at desc").Find(&borrowItems)
+
+	// Manual filter borrower.name based on search query
+
+	if searchQuery != "" {
+		var filteredBorrowItems []models.BorrowItem
+		for _, borrowItem := range borrowItems {
+			// Regex match with the search query uncase sensitive
+
+			var match, err = regexp.MatchString("(?i)"+searchQuery, borrowItem.Borrower.Name)
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to filter borrowItems"})
+				return
+			}
+			if match {
+				filteredBorrowItems = append(filteredBorrowItems, borrowItem)
+			}
+		}
+		borrowItems = filteredBorrowItems
+	}
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch borrowItems"})
 		return
 	}
 
-	// TODO : Implement search query
-	// Handle search query
-	// Filter the borrowItems based on the search query
+	if borrowItems == nil {
+		// Return empty array if no borrowItems found
+		borrowItems = []models.BorrowItem{}
+
+	}
 
 	c.JSON(http.StatusOK, borrowItems)
 }
