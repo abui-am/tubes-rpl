@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
 	"gihub.com/abui-am/tubes-rpl/initializers"
 	"gihub.com/abui-am/tubes-rpl/models"
@@ -10,7 +11,11 @@ import (
 
 func GetItems(c *gin.Context) {
 	var items []models.Item
-	result := initializers.DB.Find(&items)
+
+	// Convert query parameter to lowercase
+	searchQuery := strings.ToLower(c.Query("search"))
+
+	result := initializers.DB.Debug().Where("LOWER(name) LIKE ?", "%"+searchQuery+"%").Find(&items)
 
 	// TODO : Handle Search
 	// Mirip dengan controller user

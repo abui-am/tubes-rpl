@@ -105,7 +105,6 @@ func GetBorrowItems(c *gin.Context) {
 		Preload("User.Role").Preload("Items.Item").Order("created_at desc").Find(&borrowItems)
 
 	// Manual filter borrower.name based on search query
-
 	if searchQuery != "" {
 		var filteredBorrowItems []models.BorrowItem
 		for _, borrowItem := range borrowItems {
