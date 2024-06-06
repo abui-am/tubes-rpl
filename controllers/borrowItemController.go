@@ -20,7 +20,7 @@ func CreateBorrowItem(c *gin.Context) {
 			Quantity int  `json:"quantity"`
 		} `json:"items"`
 		Description  string `json:"description"`
-		ReturnedDate string `json:"returnedDate"`
+		ReturnBefore string `json:"returnBefore"`
 	}
 
 	if c.Bind(&body) != nil {
@@ -29,7 +29,7 @@ func CreateBorrowItem(c *gin.Context) {
 	}
 
 	// Convert the returnedDate string to time.Time
-	time, err := time.Parse(time.RFC3339, body.ReturnedDate)
+	time, err := time.Parse(time.RFC3339, body.ReturnBefore)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse returnedDate"})
@@ -45,7 +45,8 @@ func CreateBorrowItem(c *gin.Context) {
 		IsReturnedLate:    false,
 		Description:       body.Description,
 		// body.returnedDate is a string, we need to convert it to time.Time
-		ReturnedDate: time,
+		ReturnBefore: &time,
+		ReturnedDate: nil,
 	}
 
 	result := initializers.DB.Create(&borrowItem)
@@ -98,7 +99,7 @@ func CreateBorrowItem(c *gin.Context) {
 func GetBorrowItems(c *gin.Context) {
 	var borrowItems []models.BorrowItem
 	// Preload the items
-	result := initializers.DB.Debug().Preload(clause.Associations).Preload("User.Role").Preload("Items.Item").Find(&borrowItems)
+	result := initializers.DB.Debug().Preload(clause.Associations).Preload("User.Role").Preload("Items.Item").Order("created_at desc").Find(&borrowItems)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch borrowItems"})
@@ -118,6 +119,46 @@ func GetBorrowItem(c *gin.Context) {
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "BorrowItem not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, borrowItem)
+}
+
+func UpdateBorrowItem(c *gin.Context) {
+	var body struct {
+		Status            string `json:"status"`
+		ReturnedCondition string `json:"returnedCondition"`
+	}
+
+	if c.Bind(&body) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	var borrowItem models.BorrowItem
+	result := initializers.DB.Find(&borrowItem, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "BorrowItem not found"})
+		return
+	}
+
+	// Update the borrowItem
+	borrowItem.Status = body.Status
+	borrowItem.ReturnedCondition = body.ReturnedCondition
+
+	// Update the returnedDate if the status is returned
+
+	time := time.Now()
+	if body.Status == "returned" {
+		borrowItem.ReturnedDate = &time
+	}
+
+	result = initializers.DB.Save(&borrowItem)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update borrowItem"})
 		return
 	}
 

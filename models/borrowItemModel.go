@@ -13,5 +13,6 @@ type BorrowItem struct {
 	IsReturnedLate    bool               `gorm:"not null" json:"isReturnedLate" `
 	Items             []ItemToBorrowItem `gorm:"foreignKey:BorrowItemID;references:ID" json:"items"`
 	Description       string             `json:"description"`
-	ReturnedDate      time.Time          `json:"returnedDate"`
+	ReturnedDate      *time.Time         `json:"returnedDate"`
+	ReturnBefore      *time.Time         `json:"returnBefore"`
 }
